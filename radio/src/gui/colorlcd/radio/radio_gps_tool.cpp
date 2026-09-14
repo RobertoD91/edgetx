@@ -62,12 +62,24 @@ void RadioGpsTool::init()
   }
 }
 
+// Format a coordinate stored in micro-degrees as a decimal string.
+// Integer arithmetic keeps the full 6 decimals (a float only has ~7
+// significant digits) and avoids depending on printf float support.
+static void formatCoord(char* buf, size_t len, int32_t value)
+{
+  div_t d = div((int)value, 1000000);
+  snprintf(buf, len, "%s%d.%06d", value < 0 ? "-" : "", abs(d.quot), abs(d.rem));
+}
+
 void RadioGpsTool::refresh()
 {
   if (gpsSensorID >= 0) {
-    static TelemetryItem& gpsItem = telemetryItems[gpsSensorID];
-    char gps_uri[64];
-    snprintf(gps_uri, sizeof(gps_uri), "geo:0,0?q=%f,%f", (float)gpsItem.gps.latitude / 1000000, (float)gpsItem.gps.longitude / 1000000);
+    TelemetryItem& gpsItem = telemetryItems[gpsSensorID];
+    char lat[16], lon[16], gps_uri[48];
+    formatCoord(lat, sizeof(lat), gpsItem.gps.latitude);
+    formatCoord(lon, sizeof(lon), gpsItem.gps.longitude);
+    // RFC 5870 geo URI, understood by both iOS and Android
+    snprintf(gps_uri, sizeof(gps_uri), "geo:%s,%s", lat, lon);
     gpsQR->setData(gps_uri);
     gpsQR->show();
     gpsLabel->setText(getGPSSensorValue(gpsItem, 0));
