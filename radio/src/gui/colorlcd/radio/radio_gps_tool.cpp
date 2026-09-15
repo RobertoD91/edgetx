@@ -21,7 +21,31 @@
 
 #include "radio_gps_tool.h"
 
+#include "choice.h"
 #include "edgetx.h"
+
+// Labels shown in the dropdown, indexed by RadioGpsTool::UriType.
+// App names, so left untranslated.
+static const char* const uriTypeNames[RadioGpsTool::URI_TYPE_COUNT] = {
+    "geo: (RFC 5870)",
+    "geo: (Android)",
+    "Google Maps (web)",
+    "Google Maps (app)",
+    "CoMaps",
+    "Guru Maps",
+};
+
+// Every supported URI is "<prefix>lat,lon"
+static const char* const uriTypePrefixes[RadioGpsTool::URI_TYPE_COUNT] = {
+    "geo:",                       // RFC 5870, understood by iOS and Android
+    "geo:0,0?q=",                 // Android-only "search" form
+    "https://maps.google.com/?q=",
+    "comgooglemaps://?q=",        // Google Maps app URL scheme
+    "cm://map?ll=",               // CoMaps
+    "guru://show?place=",         // Guru Maps
+};
+
+uint8_t RadioGpsTool::uriType = RadioGpsTool::URI_GEO_RFC5870;
 
 RadioGpsTool::RadioGpsTool() :
     Page(ICON_RADIO_TOOLS)
@@ -42,8 +66,19 @@ void RadioGpsTool::buildBody(Window* window)
   window->padAll(PAD_ZERO);
   gpsLabel = new StaticText(window, {PAD_LARGE, PAD_LARGE, LV_SIZE_CONTENT, 0}, "", COLOR_THEME_PRIMARY1_INDEX, FONT(L));
   gpsQR = new QRCode(window, (window->width() - QR_SZ) / 2, (window->height() - QR_SZ) / 2, QR_SZ, "");
-  new TextButton(window, 
-                {window->width() - BTN_SZ - PAD_LARGE * 2, window->height() - EdgeTxStyles::UI_ELEMENT_HEIGHT - PAD_LARGE * 2, BTN_SZ, 0},
+
+  coord_t bottomY = window->height() - EdgeTxStyles::UI_ELEMENT_HEIGHT - PAD_LARGE * 2;
+
+  new Choice(window, {PAD_LARGE, bottomY, CHOICE_W, 0},
+             uriTypeNames, 0, URI_TYPE_COUNT - 1,
+             [=]() { return uriType; },
+             [=](int value) {
+               uriType = value;
+               refresh();
+             });
+
+  new TextButton(window,
+                {window->width() - BTN_SZ - PAD_LARGE * 2, bottomY, BTN_SZ, 0},
                 STR_REFRESH, [=]() {
                   refresh();
                   return 0;
@@ -75,11 +110,11 @@ void RadioGpsTool::refresh()
 {
   if (gpsSensorID >= 0) {
     TelemetryItem& gpsItem = telemetryItems[gpsSensorID];
-    char lat[16], lon[16], gps_uri[48];
+    char lat[16], lon[16], gps_uri[64];
     formatCoord(lat, sizeof(lat), gpsItem.gps.latitude);
     formatCoord(lon, sizeof(lon), gpsItem.gps.longitude);
-    // RFC 5870 geo URI, understood by both iOS and Android
-    snprintf(gps_uri, sizeof(gps_uri), "geo:%s,%s", lat, lon);
+    if (uriType >= URI_TYPE_COUNT) uriType = URI_GEO_RFC5870;
+    snprintf(gps_uri, sizeof(gps_uri), "%s%s,%s", uriTypePrefixes[uriType], lat, lon);
     gpsQR->setData(gps_uri);
     gpsQR->show();
     gpsLabel->setText(getGPSSensorValue(gpsItem, 0));
