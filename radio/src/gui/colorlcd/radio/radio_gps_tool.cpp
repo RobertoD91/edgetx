@@ -21,8 +21,11 @@
 
 #include "radio_gps_tool.h"
 
+#include <algorithm>
+
 #include "choice.h"
 #include "edgetx.h"
+#include "fonts.h"
 
 // Labels shown in the dropdown, indexed by RadioGpsTool::UriType.
 // App names, so left untranslated.
@@ -64,10 +67,21 @@ void RadioGpsTool::buildHeader(Window* window)
 void RadioGpsTool::buildBody(Window* window)
 {
   window->padAll(PAD_ZERO);
-  gpsLabel = new StaticText(window, {PAD_LARGE, PAD_LARGE, LV_SIZE_CONTENT, 0}, "", COLOR_THEME_PRIMARY1_INDEX, FONT(L));
-  gpsQR = new QRCode(window, (window->width() - QR_SZ) / 2, (window->height() - QR_SZ) / 2, QR_SZ, "");
 
+  // Three bands, top to bottom: coordinates label, QR code, controls.
+  // The QR code takes whatever is left between the other two (capped at
+  // QR_SZ), so it can never overlap them whatever the screen size.
+  coord_t labelY = PAD_LARGE;
+  coord_t labelH = getFontHeight(FONT(L));
   coord_t bottomY = window->height() - EdgeTxStyles::UI_ELEMENT_HEIGHT - PAD_LARGE * 2;
+
+  coord_t qrAreaY = labelY + labelH + PAD_LARGE;
+  coord_t qrAreaH = bottomY - PAD_LARGE - qrAreaY;
+  coord_t qrSz = std::min({QR_SZ, qrAreaH, (coord_t)(window->width() - PAD_LARGE * 2)});
+  if (qrSz < 0) qrSz = 0;
+
+  gpsLabel = new StaticText(window, {PAD_LARGE, labelY, LV_SIZE_CONTENT, 0}, "", COLOR_THEME_PRIMARY1_INDEX, FONT(L));
+  gpsQR = new QRCode(window, (window->width() - qrSz) / 2, qrAreaY + (qrAreaH - qrSz) / 2, qrSz, "");
 
   new Choice(window, {PAD_LARGE, bottomY, CHOICE_W, 0},
              uriTypeNames, 0, URI_TYPE_COUNT - 1,
