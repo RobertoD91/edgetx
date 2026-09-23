@@ -119,9 +119,17 @@ static hid::InputState _state;
 
 /*
  * HAL glue
+ *
+ * The callbacks are registered through the handle (USE_HAL_HCD_REGISTER_CALLBACKS)
+ * instead of overriding the weak HAL functions: with LTO the linker inlined
+ * the empty weak versions into the HAL, and the clock/IRQ were never enabled.
  */
 
-extern "C" void HAL_HCD_MspInit(HCD_HandleTypeDef* hhcd)
+#if (USE_HAL_HCD_REGISTER_CALLBACKS != 1U)
+#error "USB host driver needs USE_HAL_HCD_REGISTER_CALLBACKS"
+#endif
+
+static void usbhMspInit(HCD_HandleTypeDef* hhcd)
 {
   if (hhcd->Instance == USB_OTG_FS) {
     __HAL_RCC_USB_OTG_FS_CLK_ENABLE();
@@ -130,7 +138,7 @@ extern "C" void HAL_HCD_MspInit(HCD_HandleTypeDef* hhcd)
   }
 }
 
-extern "C" void HAL_HCD_MspDeInit(HCD_HandleTypeDef* hhcd)
+static void usbhMspDeInit(HCD_HandleTypeDef* hhcd)
 {
   if (hhcd->Instance == USB_OTG_FS) {
     NVIC_DisableIRQ(OTG_FS_IRQn);
@@ -138,28 +146,33 @@ extern "C" void HAL_HCD_MspDeInit(HCD_HandleTypeDef* hhcd)
   }
 }
 
-extern "C" void HAL_HCD_Connect_Callback(HCD_HandleTypeDef* hhcd)
-{
-  _connected = true;
-}
+static void usbhConnectCb(HCD_HandleTypeDef* hhcd) { _connected = true; }
 
-extern "C" void HAL_HCD_Disconnect_Callback(HCD_HandleTypeDef* hhcd)
+static void usbhDisconnectCb(HCD_HandleTypeDef* hhcd)
 {
   _connected = false;
   _portEnabled = false;
 }
 
-extern "C" void HAL_HCD_PortEnabled_Callback(HCD_HandleTypeDef* hhcd)
-{
-  _portEnabled = true;
-}
+static void usbhPortEnabledCb(HCD_HandleTypeDef* hhcd) { _portEnabled = true; }
 
-extern "C" void HAL_HCD_PortDisabled_Callback(HCD_HandleTypeDef* hhcd)
+static void usbhPortDisabledCb(HCD_HandleTypeDef* hhcd)
 {
   _portEnabled = false;
 }
 
-void usbHostIRQHandler() { HAL_HCD_IRQHandler(&hhcd_USB_HOST); }
+void usbHostIRQHandler()
+{
+  _info.irqs++;
+  HAL_HCD_IRQHandler(&hhcd_USB_HOST);
+}
+
+static void updateDiagnostics()
+{
+  uint32_t USBx_BASE = (uint32_t)USB_OTG_FS;
+  _info.hprt = USBx_HPRT0;
+  _info.gintsts = USB_OTG_FS->GINTSTS;
+}
 
 bool usbHostActive() { return _coreActive; }
 
@@ -187,13 +200,26 @@ static void coreInit()
   hhcd_USB_HOST.Init.vbus_sensing_enable = DISABLE;
   hhcd_USB_HOST.Init.use_external_vbus = DISABLE;
 
+  // MSP callbacks are looked up by HAL_HCD_Init() itself
+  hhcd_USB_HOST.MspInitCallback = usbhMspInit;
+  hhcd_USB_HOST.MspDeInitCallback = usbhMspDeInit;
+
   _connected = false;
   _portEnabled = false;
   _coreActive = true;
 
   HAL_HCD_Init(&hhcd_USB_HOST);
+
+  // HAL_HCD_Init() installs the (weak, empty) defaults: replace them before
+  // the global interrupt is enabled by HAL_HCD_Start()
+  hhcd_USB_HOST.ConnectCallback = usbhConnectCb;
+  hhcd_USB_HOST.DisconnectCallback = usbhDisconnectCb;
+  hhcd_USB_HOST.PortEnabledCallback = usbhPortEnabledCb;
+  hhcd_USB_HOST.PortDisabledCallback = usbhPortDisabledCb;
+
   HAL_HCD_Start(&hhcd_USB_HOST);
-  TRACE("USBH: host started");
+  updateDiagnostics();
+  TRACE("USBH: host started, HPRT=%08lX", _info.hprt);
 }
 
 static void coreDeinit()
@@ -596,13 +622,17 @@ static void usbhTask()
 
     if (!_connected) {
       _status = USBH_JOYSTICK_WAIT_DEVICE;
+      updateDiagnostics();
       sleep_ms(20);
       continue;
     }
 
     // Device attached
     _status = USBH_JOYSTICK_ENUMERATING;
+    uint16_t irqs = _info.irqs;
     memset(&_info, 0, sizeof(_info));
+    _info.irqs = irqs;
+    updateDiagnostics();
     TRACE("USBH: device attached");
     sleep_ms(200);  // debounce, let the device power up
 
@@ -637,6 +667,7 @@ static void usbhTask()
     }
 
     haltAllChannels();
+    updateDiagnostics();
     if (_status == USBH_JOYSTICK_READY) _status = USBH_JOYSTICK_WAIT_DEVICE;
     TRACE("USBH: device released (status %d)", _status);
 

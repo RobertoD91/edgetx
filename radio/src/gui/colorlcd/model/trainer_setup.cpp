@@ -49,9 +49,13 @@ static std::string usbHostJoystickStatusText()
     case USBH_JOYSTICK_USB_BUSY:
       return "USB busy: unplug the PC";
     case USBH_JOYSTICK_WAIT_DEVICE:
-      return "Waiting for a USB joystick";
+      snprintf(buf, sizeof(buf), "Waiting for joystick [P=%08lX I=%u]",
+               (unsigned long)info->hprt, info->irqs);
+      return buf;
     case USBH_JOYSTICK_ENUMERATING:
-      return "USB device detected...";
+      snprintf(buf, sizeof(buf), "USB device detected [P=%08lX]",
+               (unsigned long)info->hprt);
+      return buf;
     case USBH_JOYSTICK_READY:
       snprintf(buf, sizeof(buf), "%04X:%04X %d axes %d btn%s -> %d ch (%u)",
                info->vid, info->pid, info->axes, info->buttons,
@@ -62,8 +66,8 @@ static std::string usbHostJoystickStatusText()
                info->pid);
       return buf;
     case USBH_JOYSTICK_ERROR:
-      snprintf(buf, sizeof(buf), "USB error (%04X:%04X)", info->vid,
-               info->pid);
+      snprintf(buf, sizeof(buf), "USB error (%04X:%04X) [P=%08lX]", info->vid,
+               info->pid, (unsigned long)info->hprt);
       return buf;
   }
   return "";

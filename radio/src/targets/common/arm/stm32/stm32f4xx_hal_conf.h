@@ -168,7 +168,14 @@
 #define  USE_HAL_DSI_REGISTER_CALLBACKS         0U /* DSI register callback disabled       */
 #define  USE_HAL_ETH_REGISTER_CALLBACKS         0U /* ETH register callback disabled       */
 #define  USE_HAL_HASH_REGISTER_CALLBACKS        0U /* HASH register callback disabled      */
+#if defined(USB_HOST_JOYSTICK)
+/* USB host driver registers its callbacks explicitly: overriding the weak
+ * HAL callbacks is not reliable with LTO (the empty weak versions got
+ * inlined into the HAL) */
+#define  USE_HAL_HCD_REGISTER_CALLBACKS         1U /* HCD register callback enabled        */
+#else
 #define  USE_HAL_HCD_REGISTER_CALLBACKS         0U /* HCD register callback disabled       */
+#endif
 #define  USE_HAL_I2C_REGISTER_CALLBACKS         0U /* I2C register callback disabled       */
 #define  USE_HAL_FMPI2C_REGISTER_CALLBACKS      0U /* FMPI2C register callback disabled    */
 #define  USE_HAL_FMPSMBUS_REGISTER_CALLBACKS    0U /* FMPSMBUS register callback disabled  */

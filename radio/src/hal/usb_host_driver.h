@@ -52,6 +52,10 @@ struct UsbHostJoystickInfo {
   uint8_t channels;   // trainer channels produced by the device
   uint8_t interval;   // poll interval in ms
   uint16_t reports;   // reports received (wraps)
+  // diagnostics
+  uint16_t irqs;      // OTG interrupts served in host mode (wraps)
+  uint32_t hprt;      // host port register (bit 0: device connected)
+  uint32_t gintsts;   // core interrupt status
 };
 
 // Request the USB host to run. Returns false when the USB device stack is
