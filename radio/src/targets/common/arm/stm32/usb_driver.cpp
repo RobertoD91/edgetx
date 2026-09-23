@@ -45,6 +45,10 @@ extern "C" {
 #include "hal/gpio.h"
 #include "hal/usb_driver.h"
 
+#if defined(USB_HOST_JOYSTICK) && !defined(BOOT)
+#include "hal/usb_host_driver.h"
+#endif
+
 #include "hal.h"
 #include "debug.h"
 
@@ -88,6 +92,13 @@ int usbPlugged()
   return false;
 #endif
 
+#if defined(USB_HOST_JOYSTICK) && !defined(BOOT)
+  // The USB host (joystick trainer input) owns the OTG core: VBUS on the
+  // connector then comes from the external supply of the OTG cable, not
+  // from a PC, so hide it from the device stack until the core is released.
+  if (usbHostJoystickEnabled() || usbHostActive()) return false;
+#endif
+
   static uint8_t debouncedState = 0;
   static uint8_t lastState = 0;
 
@@ -117,6 +128,12 @@ extern "C" void OTG_HS_IRQHandler()
 extern "C" void OTG_FS_IRQHandler()
 {
   DEBUG_INTERRUPT(INT_OTG_FS);
+#if defined(USB_HOST_JOYSTICK) && !defined(BOOT)
+  if (usbHostActive()) {
+    usbHostIRQHandler();
+    return;
+  }
+#endif
   HAL_PCD_IRQHandler(&hpcd_USB_OTG);
 }
 #endif

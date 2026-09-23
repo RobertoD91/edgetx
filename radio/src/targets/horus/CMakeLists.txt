@@ -97,6 +97,8 @@ if (PCB STREQUAL X10)
     set(DEFAULT_INTERNAL_MODULE MULTIMODULE CACHE STRING "Default internal module")
     option(BLUETOOTH "Support for bluetooth module" OFF)
     set(USB_CHARGER YES)
+    # USB host: HID joystick on the USB-C port as trainer input
+    set(USB_HOST_JOYSTICK ON CACHE BOOL "USB host mode: HID joystick as trainer input")
     add_definitions(-DMANUFACTURER_RADIOMASTER)
     if (NOT BLUETOOTH)
       set(AUX2_SERIAL ON)

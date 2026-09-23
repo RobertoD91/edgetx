@@ -1622,6 +1622,7 @@ static const struct YamlIdStr enum_TrainerMode[] = {
   {  TRAINER_MODE_SLAVE_BLUETOOTH, "SLAVE_BT"  },
   {  TRAINER_MODE_MULTI, "MASTER_MULTI"  },
   {  TRAINER_MODE_CRSF, "MASTER_CRSF"  },
+  {  TRAINER_MODE_MASTER_USB_HID, "MASTER_USB_HID"  },
   {  0, NULL  }
 };
 

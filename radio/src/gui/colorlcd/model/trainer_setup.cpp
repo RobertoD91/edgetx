@@ -36,6 +36,40 @@
 #include "trainer_bluetooth.h"
 #endif
 
+#if defined(USB_HOST_JOYSTICK)
+#include "hal/usb_host_driver.h"
+
+static std::string usbHostJoystickStatusText()
+{
+  char buf[64];
+  const UsbHostJoystickInfo* info = usbHostJoystickInfo();
+  switch (usbHostJoystickStatus()) {
+    case USBH_JOYSTICK_OFF:
+      return "USB host off";
+    case USBH_JOYSTICK_USB_BUSY:
+      return "USB busy: unplug the PC";
+    case USBH_JOYSTICK_WAIT_DEVICE:
+      return "Waiting for a USB joystick";
+    case USBH_JOYSTICK_ENUMERATING:
+      return "USB device detected...";
+    case USBH_JOYSTICK_READY:
+      snprintf(buf, sizeof(buf), "%04X:%04X %d axes %d btn%s -> %d ch (%u)",
+               info->vid, info->pid, info->axes, info->buttons,
+               info->hat ? " hat" : "", info->channels, info->reports);
+      return buf;
+    case USBH_JOYSTICK_NOT_SUPPORTED:
+      snprintf(buf, sizeof(buf), "%04X:%04X is not a HID joystick", info->vid,
+               info->pid);
+      return buf;
+    case USBH_JOYSTICK_ERROR:
+      snprintf(buf, sizeof(buf), "USB error (%04X:%04X)", info->vid,
+               info->pid);
+      return buf;
+  }
+  return "";
+}
+#endif
+
 static const lv_coord_t col_dsc[] = {LV_GRID_FR(1), LV_GRID_FR(2),
                                      LV_GRID_TEMPLATE_LAST};
 static const lv_coord_t row_dsc[] = {LV_GRID_CONTENT,
@@ -121,6 +155,14 @@ void TrainerModuleWindow::update()
 
     bt->refresh();
     // TODO: slave: channel range
+  }
+#endif
+
+#if defined(USB_HOST_JOYSTICK)
+  if (td->mode == TRAINER_MODE_MASTER_USB_HID) {
+    auto line = newLine(grid);
+    new StaticText(line, rect_t{}, "USB");
+    new DynamicText(line, rect_t{}, usbHostJoystickStatusText);
   }
 #endif
 

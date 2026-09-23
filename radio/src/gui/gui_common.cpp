@@ -1246,6 +1246,12 @@ bool isTrainerModeAvailable(int mode)
 #endif
   }
 
+#if !defined(USB_HOST_JOYSTICK)
+  if (mode == TRAINER_MODE_MASTER_USB_HID) {
+    return false;
+  }
+#endif
+
   return true;
 }
 

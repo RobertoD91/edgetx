@@ -389,6 +389,7 @@
 #define TR_VTRAINER_BLUETOOTH_2        TR("Esclavo/BT","Esclavo/Bluetooth")
 #define TR_VTRAINER_MULTI              "Master/Multi"
 #define TR_VTRAINER_CRSF               "Master/CRSF"
+#define TR_VTRAINER_USB_HID            "Master/USB HID"
 #define TR_VFAILSAFE_1                 "No"
 #define TR_VFAILSAFE_2                 "Hold"
 #define TR_VFAILSAFE_3                 "Custom"

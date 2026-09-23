@@ -24,6 +24,10 @@
 #include "edgetx.h"
 #include "serial.h"
 
+#if defined(USB_HOST_JOYSTICK)
+#include "hal/usb_host_driver.h"
+#endif
+
 // Timer gets decremented in per10ms()
 #define TRAINER_IN_VALID_TIMEOUT 100 // 1s
 
@@ -114,6 +118,12 @@ void stopTrainer()
     case TRAINER_MODE_MASTER_SBUS_EXTERNAL_MODULE:
       trainer_stop_module_sbus();
       break;
+
+#if defined(USB_HOST_JOYSTICK)
+    case TRAINER_MODE_MASTER_USB_HID:
+      usbHostJoystickStop();
+      break;
+#endif
   }
 
   if (_on_change_cb) {
@@ -151,6 +161,12 @@ void checkTrainerSettings()
       case TRAINER_MODE_MASTER_SBUS_EXTERNAL_MODULE:
         trainer_init_module_sbus();
         break;
+
+#if defined(USB_HOST_JOYSTICK)
+      case TRAINER_MODE_MASTER_USB_HID:
+        usbHostJoystickStart();
+        break;
+#endif
     }
 
     if (_on_change_cb) {
@@ -166,6 +182,14 @@ void checkTrainerSettings()
     // serialInit() to notify us.
     trainer_init_aux_sbus();
   }
+#if defined(USB_HOST_JOYSTICK)
+  else if (currentTrainerMode == TRAINER_MODE_MASTER_USB_HID &&
+           !usbHostJoystickEnabled()) {
+    // The USB core was busy (PC connected) when the mode was selected:
+    // retry until the device stack releases it.
+    usbHostJoystickStart();
+  }
+#endif
 }
 
 void trainerSetChangeCb(void (*changeCb)(uint8_t, uint8_t))

@@ -28,6 +28,9 @@
 #include "hal/adc_driver.h"
 #include "hal/rotary_encoder.h"
 #include "hal/usb_driver.h"
+#if defined(USB_HOST_JOYSTICK)
+#include "hal/usb_host_driver.h"
+#endif
 #include "hal/audio_driver.h"
 
 #include "os/sleep.h"
@@ -307,6 +310,25 @@ uint32_t readTrims()
 }
 
 int usbPlugged() { return false; }
+
+#if defined(USB_HOST_JOYSTICK)
+// USB host (HID joystick trainer input): no hardware in the simulator
+static bool _simuUsbHostEnabled = false;
+bool usbHostJoystickStart() { _simuUsbHostEnabled = true; return true; }
+void usbHostJoystickStop() { _simuUsbHostEnabled = false; }
+bool usbHostJoystickEnabled() { return _simuUsbHostEnabled; }
+bool usbHostActive() { return false; }
+UsbHostJoystickStatus usbHostJoystickStatus()
+{
+  return _simuUsbHostEnabled ? USBH_JOYSTICK_WAIT_DEVICE : USBH_JOYSTICK_OFF;
+}
+const UsbHostJoystickInfo* usbHostJoystickInfo()
+{
+  static const UsbHostJoystickInfo info = {};
+  return &info;
+}
+void usbHostIRQHandler() {}
+#endif
 int getSelectedUsbMode() { return USB_JOYSTICK_MODE; }
 void setSelectedUsbMode(int mode) {}
 void delay_ms(uint32_t ms) { }

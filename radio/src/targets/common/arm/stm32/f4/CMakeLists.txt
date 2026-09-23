@@ -47,6 +47,8 @@ if(NOT NATIVE_BUILD)
     ${STM32CUBE_DIR}/Src/stm32f4xx_hal_dma.c
     ${STM32CUBE_DIR}/Src/stm32f4xx_hal_pcd.c
     ${STM32CUBE_DIR}/Src/stm32f4xx_hal_pcd_ex.c
+    # compiles to nothing unless HAL_HCD_MODULE_ENABLED (USB_HOST_JOYSTICK)
+    ${STM32CUBE_DIR}/Src/stm32f4xx_hal_hcd.c
     ${STM32CUBE_DIR}/Src/stm32f4xx_hal_flash.c
     ${STM32CUBE_DIR}/Src/stm32f4xx_hal_flash_ex.c
     ${STM32CUBE_DIR}/Src/stm32f4xx_hal_cortex.c

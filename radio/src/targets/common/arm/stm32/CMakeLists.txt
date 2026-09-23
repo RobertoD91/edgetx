@@ -5,6 +5,7 @@ option(LUA_COMPILER "Pre-compile and save Lua scripts" ON)
 option(LUA_ALLOCATOR_TRACER "Trace Lua memory (de)allocations to debug port (also needs DEBUG=YES NANO=NO)" OFF)
 
 option(USB_SERIAL "Enable USB serial (CDC)" OFF)
+option(USB_HOST_JOYSTICK "USB host mode: HID joystick as trainer input" OFF)
 
 set(ARCH ARM)
 add_definitions(-DSTM32 -DLUA_INPUTS -DVARIO)
@@ -76,6 +77,13 @@ if(NOT NATIVE_BUILD)
 
   if(DEBUG OR CLI OR USB_SERIAL)
     target_compile_options(stm32usb_device_fw PRIVATE -DUSB_SERIAL)
+  endif()
+
+  if(USB_HOST_JOYSTICK)
+    # needs the RTOS (task/sleep): compiled as part of the firmware target
+    set(FIRMWARE_SRC ${FIRMWARE_SRC}
+      ${STM32_DRIVER_DIR}/usb_host_driver.cpp
+    )
   endif()
 
   target_include_directories(stm32usb_device_fw PRIVATE
@@ -171,6 +179,11 @@ endif()
 if(DEBUG OR CLI OR USB_SERIAL)
   add_definitions(-DUSB_SERIAL)
   message("-- Adding support for USB serial")
+endif()
+
+if(USB_HOST_JOYSTICK)
+  add_definitions(-DUSB_HOST_JOYSTICK)
+  message("-- Adding support for USB host HID joystick trainer input")
 endif()
 
 set(FIRMWARE_SRC ${FIRMWARE_SRC} syscalls.c)

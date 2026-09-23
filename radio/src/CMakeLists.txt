@@ -460,6 +460,9 @@ set(SRC
   stamp.cpp
   timers.cpp
   trainer.cpp
+  usbh/hid_report_descriptor.cpp
+  usbh/hid_joystick_decoder.cpp
+  usbh/usbh_joystick_trainer.cpp
   model_init.cpp
   serial.cpp
   audio.cpp
